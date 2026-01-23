@@ -2,13 +2,11 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 
 class AnalysisRequest(BaseModel):
-    """Request schema for sentiment analysis"""
     text: str = Field(
         ..., 
         min_length=1, 
         max_length=5000,
-        description="Text to analyze for mental health indicators",
-        example="I've been feeling really overwhelmed with work lately, but I'm trying to stay positive."
+        description="the text",
     )
     
     class Config:
@@ -19,16 +17,13 @@ class AnalysisRequest(BaseModel):
         }
 
 class SentimentMetric(BaseModel):
-    """Individual sentiment metric with dynamic label"""
-    label: str = Field(..., description="Display label for the metric (e.g., 'Anxiety Indicators')")
+    label: str = Field(..., description="Each label (e.g., 'Anxiety Indicators')")
     value: int = Field(..., ge=0, le=100, description="Score value (0-100)")
 
 class SentimentResults(BaseModel):
-    """Container for all sentiment metrics"""
     metrics: List[SentimentMetric] = Field(..., description="List of sentiment metrics")
 
 class AnalysisResponse(BaseModel):
-    """Response schema for sentiment analysis"""
     success: bool
     data: Optional[SentimentResults] = None
     message: Optional[str] = None

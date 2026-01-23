@@ -8,7 +8,6 @@ class AnalysisRequest(BaseModel):
         max_length=5000,
         description="the text",
     )
-    
     class Config:
         json_schema_extra = {
             "example": {
@@ -28,7 +27,6 @@ class AnalysisResponse(BaseModel):
     data: Optional[SentimentResults] = None
     message: Optional[str] = None
     model_version: str = "1.0.0"
-    
     class Config:
         json_schema_extra = {
             "example": {

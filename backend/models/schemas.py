@@ -11,16 +11,16 @@ class AnalysisRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "text": "Today was challenging but I managed to complete my tasks and felt accomplished."
+                "text":"Today was challenging but I managed to complete my tasks and felt accomplished."
             }
         }
 
 class SentimentMetric(BaseModel):
-    label: str = Field(..., description="Each label (e.g., 'Anxiety Indicators')")
-    value: int = Field(..., ge=0, le=100, description="Score value (0-100)")
+    label: str=Field(..., description= "Each label(e.g.,'Depression','Anxiety')")
+    value: int = Field(..., ge=0, le=100, description= "Score value (0-100)")
 
 class SentimentResults(BaseModel):
-    metrics: List[SentimentMetric] = Field(..., description="List of sentiment metrics")
+    metrics: List[SentimentMetric] = Field(..., description= "List of sentiment metrics")
 
 class AnalysisResponse(BaseModel):
     success: bool
@@ -35,10 +35,10 @@ class AnalysisResponse(BaseModel):
                     "metrics": [
                         {"label": "Anxiety Indicators", "value": 35},
                         {"label": "Mood Stability", "value": 72},
-                        {"label": "Stress Level", "value": 45}
+                        {"label":"Stress Level", "value": 45}
                     ]
                 },
-                "message": "Analysis completed successfully",
+                "message":"Analysis completed successfully",
                 "model_version": "1.0.0"
             }
         }

@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 import json
+import time
 
 load_dotenv()
 
@@ -12,6 +13,7 @@ def requestGemini(prompt):
         model="gemini-3-flash-preview", contents=prompt
     )
     return response.text
+
 
 def promptGeneration(texts):
     items = []
@@ -101,20 +103,6 @@ def promptGeneration(texts):
     {joined}
     """
     return prompt
-            
-# def promptGeneration(chnk : pd.DataFrame):
-#     prompt = f"""
-
-# Label the following texts independently:
-
-# 1. {chnk.iloc[0]}
-# 2. {chnk.iloc[1]}
-# 3. {chnk.iloc[2]}
-# 4. {chnk.iloc[3]}
-# 5. {chnk.iloc[4]}
-# """
-
-#     return prompt
 
 
 def safe_json_load(text):
@@ -124,28 +112,54 @@ def safe_json_load(text):
     return json.loads(text)
 
 
+def processedRowCount(cache_path):
+    if os.path.exists(cache_path):
+        return len(pd.read_csv(cache_path))
+    return 0
+
+
+def labelChunk(chunk):
+    prompt= promptGeneration(chunk["selftext"])
+    response= requestGemini(prompt)
+    labels = safe_json_load(response) #stores the list of dicts
+    labels_df =pd.json_normalize(labels).sort_values("id").reset_index(drop = True) #convert list of dicts to dataframe
+    scores_df = labels_df.filter(regex = "^scores\\.") #extract only the scores columns
+    scores_df.columns= scores_df.columns.str.replace("scores.", "", regex=False) #rename columns to remove "scores." prefix
+    labelled_chunk =pd.concat(
+        [chunk.reset_index(drop=True),
+            scores_df,
+            labels_df["confidence"]],axis=1)
+    return labelled_chunk
+
+
+def append_to_cache(df, cache_path):
+    df.to_csv(
+        cache_path,
+        mode="a",
+        header=not os.path.exists(cache_path),
+        index=False
+    )
+
+
 
 def main(path="ml/data/processed/to_be_labelled.csv"):
-    all_labelled_chunks = []
-    for chunk in pd.read_csv(path,chunksize=5):
-        print(chunk['selftext'])
-        prompt = promptGeneration(chunk['selftext'])
-        response = requestGemini(prompt)
+    CACHE_PATH = "ml/data/processed/labelled_cache.csv"
+    CHUNK_SIZE = 5
+    processed_rows = processedRowCount(CACHE_PATH)
+    print(f"Resuming from row {processed_rows}" if processed_rows else "Starting fresh")
+    reader = pd.read_csv(
+        path,
+        chunksize=CHUNK_SIZE,
+        skiprows=range(1, processed_rows + 1)
+    )
+    for chunk in reader:
         try:
-            labels = safe_json_load(response)
+            labelled_chunk = labelChunk(chunk)
+            append_to_cache(labelled_chunk, CACHE_PATH)
+            print(f"Saved {len(labelled_chunk)} rows to cache")
+            time.sleep(2)  # brief pause to respect rate limits
         except json.JSONDecodeError:
             print("JSON parsing error, skipping chunk")
-            continue
-        labels_df = pd.json_normalize(labels).sort_values("id").reset_index(drop=True)
-        scores_df = labels_df.filter(regex="^scores\\.")
-        scores_df.columns = scores_df.columns.str.replace("scores.", "", regex=False)
-        labelled_chunk = pd.concat(
-            [chunk.reset_index(drop=True), scores_df, labels_df["confidence"]],
-            axis=1
-        )
-        print(labelled_chunk.columns)
-        print(type(labelled_chunk))
-        all_labelled_chunks.append(labelled_chunk)
 
 if __name__ == "__main__":
     main()

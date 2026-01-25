@@ -4,15 +4,30 @@ from dotenv import load_dotenv
 import pandas as pd
 import json
 import time
+from itertools import cycle
 
 load_dotenv()
+GEMINI_KEYS = os.getenv("GEMINI_KEYS").split(",")
+key_cycle = cycle(GEMINI_KEYS)
 
-def requestGemini(prompt):
-    client = genai.Client()
-    response = client.models.generate_content(
-        model="gemini-3-flash-preview", contents=prompt
-    )
-    return response.text
+
+def requestGemini(prompt, max_retries=5):
+    last_error = None
+    for _ in range(max_retries):
+        api_key = next(key_cycle)
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            last_error = e
+            print(f"⚠️ Gemini key failed, switching key... ({e})")
+            time.sleep(6)
+    raise RuntimeError(f"All Gemini keys failed: {last_error}")
+
 
 
 def promptGeneration(texts):
@@ -141,7 +156,6 @@ def append_to_cache(df, cache_path):
     )
 
 
-
 def main(path="ml/data/processed/to_be_labelled.csv"):
     CACHE_PATH = "ml/data/processed/labelled_cache.csv"
     CHUNK_SIZE = 5
@@ -157,7 +171,7 @@ def main(path="ml/data/processed/to_be_labelled.csv"):
             labelled_chunk = labelChunk(chunk)
             append_to_cache(labelled_chunk, CACHE_PATH)
             print(f"Saved {len(labelled_chunk)} rows to cache")
-            time.sleep(2)  # brief pause to respect rate limits
+            time.sleep(6)  # brief pause to respect rate limits
         except json.JSONDecodeError:
             print("JSON parsing error, skipping chunk")
 

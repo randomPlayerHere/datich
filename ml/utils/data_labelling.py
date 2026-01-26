@@ -5,29 +5,41 @@ import pandas as pd
 import json
 import time
 from itertools import cycle
+import re
+import concurrent.futures
+from datetime import datetime
+
+FAILED_JSON_PATH = "ml/data/processed/failed_json_outputs.jsonl"
+CACHE_PATH = "ml/data/processed/labelled_cache.csv"
+CHUNK_SIZE = 5
+
 
 load_dotenv()
 GEMINI_KEYS = os.getenv("GEMINI_KEYS").split(",")
 key_cycle = cycle(GEMINI_KEYS)
 
 
-def requestGemini(prompt, max_retries=5):
+def requestGemini(prompt, timeout=120, max_retries=5):
     last_error = None
     for _ in range(max_retries):
         api_key = next(key_cycle)
         try:
             client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt
-            )
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(
+                    client.models.generate_content,
+                    model="gemini-2.5-flash",
+                    contents=prompt
+                )
+                response = future.result(timeout=timeout)
             return response.text
+        except concurrent.futures.TimeoutError:
+            print("⏱️ Gemini request timed out, rotating key...")
         except Exception as e:
             last_error = e
-            print(f"⚠️ Gemini key failed, switching key... ({e})")
-            time.sleep(6)
+            print(f"⚠️ Gemini key failed ({e}), rotating key...")
+        time.sleep(6)
     raise RuntimeError(f"All Gemini keys failed: {last_error}")
-
 
 
 def promptGeneration(texts):
@@ -121,10 +133,24 @@ def promptGeneration(texts):
 
 
 def safe_json_load(text):
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.split("```")[1]
-    return json.loads(text)
+    match = re.search(r'\[.*\]', text, re.DOTALL)
+    if not match:
+        raise json.JSONDecodeError("No JSON array found", text, 0)
+    return json.loads(match.group())
+
+
+
+def log_failed_json(chunk, raw_response, error):
+    record = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "row_ids": chunk.index.tolist(),
+        "selftext": chunk["selftext"].tolist(),
+        "raw_response": raw_response,
+        "error": str(error)
+    }
+    with open(FAILED_JSON_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
 
 
 def processedRowCount(cache_path):
@@ -134,17 +160,15 @@ def processedRowCount(cache_path):
 
 
 def labelChunk(chunk):
-    prompt= promptGeneration(chunk["selftext"])
-    response= requestGemini(prompt)
-    labels = safe_json_load(response) #stores the list of dicts
-    labels_df =pd.json_normalize(labels).sort_values("id").reset_index(drop = True) #convert list of dicts to dataframe
-    scores_df = labels_df.filter(regex = "^scores\\.") #extract only the scores columns
-    scores_df.columns= scores_df.columns.str.replace("scores.", "", regex=False) #rename columns to remove "scores." prefix
-    labelled_chunk =pd.concat(
-        [chunk.reset_index(drop=True),
-            scores_df,
-            labels_df["confidence"]],axis=1)
-    return labelled_chunk
+    prompt = promptGeneration(chunk["selftext"])
+    response = requestGemini(prompt)
+    labels = safe_json_load(response)  # may raise JSONDecodeError
+    labels_df = pd.json_normalize(labels).sort_values("id").reset_index(drop=True)
+    scores_df = labels_df.filter(regex="^scores\\.")
+    scores_df.columns = scores_df.columns.str.replace("scores.", "", regex=False)
+    labelled_chunk = pd.concat([chunk.reset_index(drop=True), scores_df, labels_df["confidence"]],axis=1)
+    return labelled_chunk, response
+
 
 
 def append_to_cache(df, cache_path):
@@ -157,24 +181,18 @@ def append_to_cache(df, cache_path):
 
 
 def main(path="ml/data/processed/to_be_labelled.csv"):
-    CACHE_PATH = "ml/data/processed/labelled_cache.csv"
-    CHUNK_SIZE = 5
     processed_rows = processedRowCount(CACHE_PATH)
     print(f"Resuming from row {processed_rows}" if processed_rows else "Starting fresh")
-    reader = pd.read_csv(
-        path,
-        chunksize=CHUNK_SIZE,
-        skiprows=range(1, processed_rows + 1)
-    )
-    for chunk in reader:
+    reader = pd.read_csv(path,chunksize=CHUNK_SIZE,skiprows=range(1, processed_rows + 1))
+    for chunk_idx, chunk in enumerate(reader):
         try:
-            labelled_chunk = labelChunk(chunk)
+            labelled_chunk, response = labelChunk(chunk)
             append_to_cache(labelled_chunk, CACHE_PATH)
             print(f"Saved {len(labelled_chunk)} rows to cache")
-            time.sleep(6)  # brief pause to respect rate limits
-        except json.JSONDecodeError:
-            print("JSON parsing error, skipping chunk")
+            time.sleep(6)
+        except json.JSONDecodeError as e:
+            print(f"❌ JSON parsing error in chunk {chunk_idx}, saving to failed file")
+            log_failed_json(chunk=chunk,raw_response=response,error=e)
 
 if __name__ == "__main__":
     main()
-    

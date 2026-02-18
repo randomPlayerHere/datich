@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 import json
+import csv
 import time
 from itertools import cycle
 import re
@@ -10,7 +11,7 @@ import concurrent.futures
 from datetime import datetime
 
 FAILED_JSON_PATH = "ml/data/processed/failed_json_outputs.jsonl"
-CACHE_PATH = "ml/data/processed/labelled_cache.csv"
+CACHE_PATH = "ml/data/processed/labelled_dataset2.csv"
 CHUNK_SIZE = 5
 
 
@@ -155,7 +156,13 @@ def log_failed_json(chunk, raw_response, error):
 
 def processedRowCount(cache_path):
     if os.path.exists(cache_path):
-        return len(pd.read_csv(cache_path))
+        with open(cache_path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.reader(f)
+            try:
+                next(reader)  # skip header
+            except StopIteration:
+                return 0
+            return sum(1 for _ in reader)
     return 0
 
 
@@ -180,7 +187,7 @@ def append_to_cache(df, cache_path):
     )
 
 
-def main(path="ml/data/processed/to_be_labelled.csv"):
+def main(path="ml/data/processed/to_be_labelled2.csv"):
     processed_rows = processedRowCount(CACHE_PATH)
     print(f"Resuming from row {processed_rows}" if processed_rows else "Starting fresh")
     reader = pd.read_csv(path,chunksize=CHUNK_SIZE,skiprows=range(1, processed_rows + 1))
@@ -191,7 +198,7 @@ def main(path="ml/data/processed/to_be_labelled.csv"):
             print(f"Saved {len(labelled_chunk)} rows to cache")
             time.sleep(6)
         except json.JSONDecodeError as e:
-            print(f"❌ JSON parsing error in chunk {chunk_idx}, saving to failed file")
+            print(f"JSON parsing error in chunk {chunk_idx}, saving to failed file")
             log_failed_json(chunk=chunk,raw_response=response,error=e)
 
 if __name__ == "__main__":

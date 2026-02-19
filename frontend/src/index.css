@@ -1,0 +1,222 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core palette - Deep space meets neon */
+    --background: 240 20% 8%;
+    --foreground: 220 20% 95%;
+
+    --card: 240 15% 12%;
+    --card-foreground: 220 20% 95%;
+
+    --popover: 240 15% 12%;
+    --popover-foreground: 220 20% 95%;
+
+    --primary: 270 80% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 60% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 10% 20%;
+    --muted-foreground: 220 15% 60%;
+
+    --accent: 280 70% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 15% 20%;
+    --input: 240 15% 18%;
+    --ring: 270 80% 65%;
+
+    --radius: 1rem;
+
+    /* Custom semantic tokens */
+    --glass-bg: 240 20% 12% / 0.6;
+    --glass-border: 240 15% 30% / 0.5;
+    --glass-shadow: 270 80% 40% / 0.15;
+    
+    --glow-primary: 270 80% 65%;
+    --glow-secondary: 220 80% 60%;
+    --glow-accent: 280 70% 55%;
+
+    /* Indicator colors */
+    --indicator-low: 145 70% 50%;
+    --indicator-medium: 45 90% 55%;
+    --indicator-high: 0 75% 55%;
+
+    /* Mesh gradient colors */
+    --mesh-1: 270 60% 30%;
+    --mesh-2: 220 70% 25%;
+    --mesh-3: 280 50% 20%;
+    --mesh-4: 200 60% 20%;
+  }
+
+  .dark {
+    --background: 240 20% 8%;
+    --foreground: 220 20% 95%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Glassmorphism window */
+  .glass-window {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: 
+      0 8px 32px hsl(var(--glass-shadow)),
+      0 0 80px -20px hsl(var(--glow-primary) / 0.3),
+      inset 0 1px 0 0 hsl(0 0% 100% / 0.05);
+  }
+
+  /* Input glow effect */
+  .input-glow {
+    @apply transition-all duration-300;
+    box-shadow: 0 0 0 0 hsl(var(--glow-primary) / 0);
+  }
+
+  .input-glow:focus {
+    box-shadow: 
+      0 0 0 2px hsl(var(--glow-primary) / 0.3),
+      0 0 30px -5px hsl(var(--glow-primary) / 0.4);
+  }
+
+  /* Submit button styles */
+  .btn-submit {
+    @apply relative overflow-hidden font-semibold tracking-wider;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--accent)) 50%,
+      hsl(var(--secondary)) 100%
+    );
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+    box-shadow: 
+      0 4px 20px hsl(var(--glow-primary) / 0.4),
+      0 0 40px -10px hsl(var(--glow-accent) / 0.3);
+  }
+
+  .btn-submit:hover {
+    box-shadow: 
+      0 6px 30px hsl(var(--glow-primary) / 0.6),
+      0 0 60px -10px hsl(var(--glow-accent) / 0.5);
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+  }
+
+  /* Progress bar track */
+  .progress-track {
+    @apply relative overflow-hidden rounded-full;
+    background: hsl(var(--muted));
+    box-shadow: inset 0 2px 4px hsl(0 0% 0% / 0.3);
+  }
+
+  /* Progress bar fill variants */
+  .progress-fill-low {
+    background: linear-gradient(90deg, hsl(var(--indicator-low)), hsl(145 70% 60%));
+    box-shadow: 0 0 20px hsl(var(--indicator-low) / 0.5);
+  }
+
+  .progress-fill-medium {
+    background: linear-gradient(90deg, hsl(var(--indicator-medium)), hsl(35 90% 55%));
+    box-shadow: 0 0 20px hsl(var(--indicator-medium) / 0.5);
+  }
+
+  .progress-fill-high {
+    background: linear-gradient(90deg, hsl(var(--indicator-high)), hsl(15 75% 55%));
+    box-shadow: 0 0 20px hsl(var(--indicator-high) / 0.5);
+  }
+
+  /* Sparkle container */
+  .sparkle-container {
+    position: relative;
+  }
+
+  .sparkle-container::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), hsl(var(--indicator-low) / 0.3) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .sparkle-container.active::after {
+    opacity: 1;
+    animation: sparkle-pulse 2s ease-in-out infinite;
+  }
+}
+
+/* Animated mesh gradient background */
+@keyframes mesh-gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes sparkle-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}

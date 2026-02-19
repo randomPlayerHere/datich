@@ -104,3 +104,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+frontend/README.md# Frontend local files
+frontend/README.md
+frontend/BACKEND_INTEGRATION.md

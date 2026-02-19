@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from models.schemas import AnalysisRequest, AnalysisResponse, SentimentScores
+from models.schemas import AnalysisRequest, AnalysisResponse, SentimentMetric
 from models.sentiment import get_analyzer, SentimentAnalyzer
 
 router = APIRouter()
@@ -12,7 +12,7 @@ async def analyze_text(
         scores = analyzer.analyze(request.text)
         return AnalysisResponse(
             success=True,
-            data=SentimentScores(**scores),
+            data=SentimentMetric(**scores),
             message="Analysis completed successfully"
         )
     except Exception as e:

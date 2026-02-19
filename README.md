@@ -1,5 +1,12 @@
 # Datich
 
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.95%2B-009688?logo=fastapi)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch)
+![React](https://img.shields.io/badge/React-18%2B-61DAFB?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-3178C6?logo=typescript)
+![Transformers](https://img.shields.io/badge/Transformers-NLP-FFD21E?logo=huggingface)
+
 A sentiment analysis platform that combines machine learning with a modern web interface. Datich analyzes text input and provides dynamic sentiment metrics with visual feedback.
 
 **Status**: This project is currently under active development. Core features are functional, with ongoing improvements to the ML model, backend API, and UI/UX.
@@ -223,7 +230,7 @@ This project was built with a focus on clean architecture and modern web develop
 
 ## License
 
-This project is not yet licensed. License information will be added as the project matures.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Contact
 

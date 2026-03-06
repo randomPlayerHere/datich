@@ -40,7 +40,7 @@ const SentimentWindow = () => {
       className="glass-window rounded-2xl w-full max-w-4xl mx-4 overflow-hidden"
     >
       {/* Title Bar */}
-      <WindowTitleBar title="Mental Health Sentiment OS v1.0" />
+      <WindowTitleBar title="Datich v1.0" />
 
       {/* Content */}
       <div className="p-6 md:p-8">

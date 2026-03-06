@@ -1,55 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import confetti from "canvas-confetti";
 import WindowTitleBar from "./WindowTitleBar";
 import ThoughtInput from "./ThoughtInput";
 import SubmitButton from "./SubmitButton";
-import ResultsPanel, { SentimentResults } from "./ResultsPanel";
+import ResultsPanel from "./ResultsPanel";
+import { useSentimentAnalysis } from "@/hooks/useSentimentAnalysis";
+import { useToast } from "@/hooks/use-toast";
 
 const SentimentWindow = () => {
   const [inputText, setInputText] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [results, setResults] = useState<SentimentResults | null>(null);
+  const { analyze, isLoading, error, results } = useSentimentAnalysis();
+  const { toast } = useToast();
 
-  const simulateAnalysis = async () => {
+  const handleAnalyze = async () => {
     if (!inputText.trim()) return;
-    
-    setIsAnalyzing(true);
-    setResults(null);
-    
-    // Simulate 2-second analysis delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    // Generate random results with dynamic labels
-    const newResults: SentimentResults = {
-      metrics: [
-        { label: "Anxiety Indicators", value: Math.floor(Math.random() * 100) },
-        { label: "Mood Stability", value: Math.floor(Math.random() * 100) },
-        { label: "Stress Level", value: Math.floor(Math.random() * 100) },
-      ]
-    };
-    
-    setResults(newResults);
-    setIsAnalyzing(false);
-    
-    // Trigger confetti if mood is high
-    const moodMetric = newResults.metrics.find(m => m.label.toLowerCase().includes('mood'));
-    if (moodMetric && moodMetric.value >= 70) {
-      triggerSparkles();
-    }
+    await analyze(inputText);
   };
 
-  const triggerSparkles = () => {
-    confetti({
-      particleCount: 30,
-      spread: 60,
-      origin: { x: 0.75, y: 0.4 },
-      colors: ['#28C840', '#4ade80', '#22c55e'],
-      gravity: 1.5,
-      scalar: 0.8,
-      ticks: 100,
-    });
-  };
+  // Show error toast when analysis fails
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Analysis Failed",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   return (
     <motion.div
@@ -64,7 +41,7 @@ const SentimentWindow = () => {
     >
       {/* Title Bar */}
       <WindowTitleBar title="Mental Health Sentiment OS v1.0" />
-      
+
       {/* Content */}
       <div className="p-6 md:p-8">
         <div className="grid md:grid-cols-2 gap-6 md:gap-8">
@@ -73,15 +50,15 @@ const SentimentWindow = () => {
             <ThoughtInput
               value={inputText}
               onChange={setInputText}
-              disabled={isAnalyzing}
+              disabled={isLoading}
             />
             <SubmitButton
-              onClick={simulateAnalysis}
-              isLoading={isAnalyzing}
+              onClick={handleAnalyze}
+              isLoading={isLoading}
               disabled={!inputText.trim()}
             />
           </div>
-          
+
           {/* Right Column - Results */}
           <div className="min-h-[300px]">
             <ResultsPanel
@@ -91,7 +68,7 @@ const SentimentWindow = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Footer Disclaimer */}
       <div className="px-6 py-4 border-t border-border/30 bg-muted/10">
         <p className="font-mono text-[10px] text-muted-foreground/60 text-center tracking-wide">

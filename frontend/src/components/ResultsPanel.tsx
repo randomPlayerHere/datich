@@ -1,6 +1,16 @@
 import { motion } from "framer-motion";
 import SentimentBar from "./SentimentBar";
 
+export interface ProfileMatch {
+  profile: string;
+  confidence_percentage: number;
+}
+
+export interface Classification {
+  primary_profile: string;
+  top_3_matches: ProfileMatch[];
+}
+
 export interface SentimentResult {
   label: string;
   value: number;
@@ -8,6 +18,7 @@ export interface SentimentResult {
 
 export interface SentimentResults {
   metrics: SentimentResult[];
+  classification: Classification;
 }
 
 interface ResultsPanelProps {
@@ -25,12 +36,12 @@ const ResultsPanel = ({ results, isVisible }: ResultsPanelProps) => {
       >
         <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center mb-4">
           <motion.div
-            animate={{ 
+            animate={{
               rotate: [0, 10, -10, 0],
               scale: [1, 1.05, 1],
             }}
-            transition={{ 
-              duration: 4, 
+            transition={{
+              duration: 4,
               repeat: Infinity,
               ease: "easeInOut",
             }}
@@ -49,7 +60,7 @@ const ResultsPanel = ({ results, isVisible }: ResultsPanelProps) => {
     );
   }
 
-  const codes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const codes = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   return (
     <motion.div
@@ -64,20 +75,45 @@ const ResultsPanel = ({ results, isVisible }: ResultsPanelProps) => {
           Analysis Complete
         </span>
       </div>
-      
-      {/* Results */}
-      <div className="flex flex-col gap-6 flex-1">
-        {results.metrics.map((metric, index) => (
-          <SentimentBar
-            key={index}
-            code={codes[index] || String(index + 1)}
-            label={metric.label}
-            value={metric.value}
-            delay={index * 0.15}
-            showSparkle={metric.label.toLowerCase().includes('mood') && metric.value >= 70}
-          />
-        ))}
-      </div>
+
+      {/* Classification Results */}
+      {results.classification && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-col justify-center flex-1"
+        >
+          {/* Primary Profile */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+            <span className="font-mono text-[10px] text-muted-foreground tracking-wider uppercase">
+              Primary Profile
+            </span>
+          </div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="font-mono text-sm font-semibold text-foreground mb-6"
+          >
+            {results.classification.primary_profile}
+          </motion.p>
+
+          {/* Top 3 Matches as Bars */}
+          <div className="flex flex-col gap-6">
+            {results.classification.top_3_matches.map((match, i) => (
+              <SentimentBar
+                key={i}
+                code={codes[i]}
+                label={match.profile}
+                value={Math.round(match.confidence_percentage)}
+                delay={i * 0.15}
+              />
+            ))}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 };

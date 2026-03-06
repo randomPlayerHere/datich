@@ -1,237 +1,211 @@
+<div align="center">
+
 # Datich
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.95%2B-009688?logo=fastapi)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch)
-![React](https://img.shields.io/badge/React-18%2B-61DAFB?logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-3178C6?logo=typescript)
-![Transformers](https://img.shields.io/badge/Transformers-NLP-FFD21E?logo=huggingface)
+**Mental state analysis powered by a fine-tuned Small Language Model**
 
-A sentiment analysis platform that combines machine learning with a modern web interface. Datich analyzes text input and provides dynamic sentiment metrics with visual feedback.
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)](LICENSE)
+[![Hugging Face](https://img.shields.io/badge/HF%20Spaces-Live-FF9D00?style=flat&logo=huggingface&logoColor=white)](https://huggingface.co/spaces/randomPlayerHere/datich-hf)
 
-**Status**: This project is currently under active development. Core features are functional, with ongoing improvements to the ML model, backend API, and UI/UX.
+---
 
-## Overview
+Datich analyzes text for mental health indicators using a **Qwen2.5-0.5B** model fine-tuned with LoRA adapters. It scores six emotional dimensions and classifies the input into one of four psychological profiles.
 
-Datich consists of three main components:
+> **Disclaimer**: This is a portfolio project demonstrating SLM integration. It is not intended for clinical or medical use.
 
-- **Frontend**: A React + TypeScript web application with a polished UI using Tailwind CSS and shadcn/ui components
-- **Backend**: A FastAPI server providing sentiment analysis API endpoints
-- **ML**: Machine learning models and data processing pipeline for training custom sentiment classifiers
+</div>
 
-The application allows users to input text and receive detailed sentiment analysis results with visual representations of emotional metrics.
+---
+
+## Architecture
+
+```
+Frontend (React/Vite)          Backend (FastAPI on HF Spaces)
+---------------------          --------------------------------
+                               Qwen2.5-0.5B + LoRA adapter
+  User Input ----POST----->    Tokenize -> Forward Pass -> 6 scores
+                               StandardScaler -> KMeans clustering
+  Profile Bars <--JSON-----    Classification (4 profiles)
+```
+
+The frontend sends text to the FastAPI backend hosted on Hugging Face Spaces. The backend runs a single forward pass through the fine-tuned model, producing six emotion scores. These scores are then scaled and clustered via a pre-trained KMeans model to produce a psychological profile classification.
+
+---
+
+## Emotional Dimensions
+
+| Score | Description |
+|-------|-------------|
+| Sadness | Degree of sadness indicators in the text |
+| Anxiety | Level of anxious or worried language |
+| Rumination | Repetitive, self-reflective thought patterns |
+| Self Focus | Degree of inward-directed attention |
+| Hopelessness | Indicators of despair or lack of future orientation |
+| Emotional Volatility | Instability or rapid shifts in emotional tone |
+
+## Profile Classifications
+
+| Profile | Description |
+|---------|-------------|
+| Severe Distress / Depressive Profile | High scores across most negative dimensions |
+| Passive Sadness / Apathy | Elevated sadness with low volatility |
+| Baseline / Mild Anxiety | Low overall scores, minor anxious tendencies |
+| Emotionally Volatile / Dysregulated | High emotional volatility and instability |
+
+---
 
 ## Project Structure
 
 ```
 datich/
-├── frontend/              # React + Vite frontend application
-│   ├── src/
-│   │   ├── components/   # Reusable UI components
-│   │   ├── pages/        # Page components
-│   │   ├── hooks/        # Custom React hooks
-│   │   └── lib/          # Utilities and helpers
-│   └── package.json
-├── backend/              # FastAPI backend server
-│   ├── models/           # Sentiment analysis models and schemas
-│   ├── routers/          # API route handlers
-│   ├── config.py         # Configuration
-│   └── main.py           # Application entry point
-├── ml/                   # Machine learning pipeline
-│   ├── training.ipynb    # Model training notebook
-│   ├── mpv.ipynb         # Data exploration and processing
-│   ├── data/             # Datasets (raw and processed)
-│   └── utils/            # ML utility functions
-└── db/                   # Database files (when implemented)
+├── main.py                  # FastAPI application with all endpoints
+├── Dockerfile               # HF Spaces Docker deployment
+├── requirements.txt         # Python dependencies
+├── ml/
+│   ├── binaries/
+│   │   ├── qwen_lora/       # Fine-tuned LoRA adapter weights
+│   │   ├── datich_scaler.pkl
+│   │   └── datich_kmeans_model.pkl
+│   ├── model_training.py    # Training script
+│   ├── data_preprocessing.py
+│   └── utils/
+│       └── data_labelling.py
+└── frontend/
+    ├── src/
+    │   ├── components/      # React UI components
+    │   ├── hooks/            # useSentimentAnalysis API hook
+    │   └── pages/
+    ├── package.json
+    └── vite.config.ts
 ```
 
-## Tech Stack
+---
 
-### Frontend
-- React 18 with TypeScript
-- Vite for fast build tooling
-- Tailwind CSS for styling
-- shadcn/ui component library
-- React Query for data fetching
-- React Router for navigation
+## API
+
+The backend exposes a REST API at `https://randomplayerhere-datich-hf.hf.space`.
+
+### `POST /api/v1/analyze`
+
+Analyze text for mental state indicators.
+
+**Request:**
+
+```json
+{
+  "text": "I feel very anxious and worried about my future"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "scores": {
+      "sadness": 0.71,
+      "anxiety": 0.57,
+      "rumination": 0.60,
+      "self_focus": 0.68,
+      "hopelessness": 0.18,
+      "emotional_volatility": 0.00
+    },
+    "classification": {
+      "primary_profile": "Severe Distress / Depressive Profile",
+      "top_3_matches": [
+        { "profile": "Severe Distress / Depressive Profile", "confidence_percentage": 29.0 },
+        { "profile": "Baseline / Mild Anxiety", "confidence_percentage": 27.9 },
+        { "profile": "Passive Sadness / Apathy", "confidence_percentage": 25.4 }
+      ]
+    }
+  },
+  "message": "Analysis completed successfully",
+  "model_version": "1.0.0"
+}
+```
+
+### `GET /health`
+
+Returns `{"status": "ok", "model_loaded": true}` when the service is ready.
+
+### `GET /api/v1/models/info`
+
+Returns model metadata (name, adapter, device, status).
+
+---
+
+## Local Development
 
 ### Backend
-- FastAPI for REST API
-- Transformers (Hugging Face) for NLP models
-- PyTorch for deep learning
-- Sentence Transformers for embeddings
-- Uvicorn ASGI server
 
-### Machine Learning
-- PyTorch for model training
-- Sentence Transformers
-- Pandas for data manipulation
-- Scikit-learn for preprocessing
+```bash
+# Clone the repository
+git clone https://github.com/randomPlayerHere/datich.git
+cd datich
 
-## Getting Started
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
 
-### Prerequisites
+# Install dependencies
+pip install -r requirements.txt
 
-- Node.js 18+ and npm (for frontend)
-- Python 3.9+ (for backend and ML)
-- Git
+# Run the server
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
 
-### Frontend Setup
+The API docs will be available at `http://localhost:8000/docs`.
+
+### Frontend
 
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Create .env file
+echo "VITE_API_URL=http://localhost:8000" > .env
+
+# Start development server
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173`
+The frontend will be available at `http://localhost:8080`.
 
-### Backend Setup
-
-Install PyTorch (CPU version):
-
-```bash
-pip uninstall torch -y
-pip install torch --index-url https://download.pytorch.org/whl/cpu
-pip install sentence-transformers
-```
-
-Install backend dependencies:
-
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-Run the backend server:
-
-```bash
-python main.py
-```
-
-The API will be available at `http://localhost:8000` with interactive docs at `/docs`
-
-### Machine Learning Setup
-
-```bash
-pip install -r ml/requirements.txt
-jupyter notebook
-```
-
-Open `ml/training.ipynb` or `ml/mpv.ipynb` to work with the ML pipeline.
-
-## Available Scripts
-
-### Frontend
-
-```bash
-npm run dev              # Start development server
-npm run build            # Build for production
-npm run preview          # Preview production build
-npm run lint             # Run ESLint
-npm run test             # Run tests
-npm run test:watch       # Run tests in watch mode
-```
-
-### Backend
-
-```bash
-python main.py           # Start FastAPI server
-```
-
-## API Endpoints
-
-The backend provides the following endpoints:
-
-- `GET /` - Health check
-- `GET /health` - API health status
-- `POST /api/v1/analyze` - Analyze sentiment of provided text (in development)
-
-API documentation available at `http://localhost:8000/docs`
-
-## Features
-
-### Current
-- Clean, modern web interface with mesh gradient background
-- Text input for sentiment analysis
-- Responsive design that works on desktop and mobile
-- Backend API structure ready for integration
-- ML model pipeline with data processing
-
-### In Development
-- Full sentiment analysis integration
-- Dynamic sentiment metrics visualization
-- Support for multiple sentiment categories (positive, negative, neutral, etc.)
-- Advanced ML model training with custom datasets
-- Results caching and history tracking
-
-## Development Workflow
-
-1. **Frontend Development**: Make changes in `frontend/src/` and the dev server will hot reload
-2. **Backend Development**: Modify files in `backend/` and restart the server
-3. **ML Development**: Work in Jupyter notebooks in `ml/` folder for experimentation
+---
 
 ## Deployment
 
-The frontend can be deployed to Vercel, Netlify, or any static hosting service:
+| Component | Platform | URL |
+|-----------|----------|-----|
+| Backend API | Hugging Face Spaces (Docker) | [randomPlayerHere/datich-hf](https://huggingface.co/spaces/randomPlayerHere/datich-hf) |
+| Frontend | Vercel | -- |
 
-```bash
-cd frontend
-npm run build
-# Upload the dist/ folder to your hosting provider
-```
-
-### Vercel Deployment (Recommended)
-
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Set root directory to `frontend`
-4. Click deploy
-
-The backend can be deployed to services like Heroku, Railway, or AWS EC2.
-
-## Environment Variables
-
-### Backend
-Create a `.env` file in the `backend/` directory:
+When deploying the frontend to Vercel, set the environment variable:
 
 ```
-MODEL_NAME=distilbert-base-uncased-finetuned-sst-2-english
-CUDA_AVAILABLE=false
+VITE_API_URL=https://randomplayerhere-datich-hf.hf.space
 ```
 
-### Frontend
-The frontend uses environment variables for API endpoints (update as needed for production).
+---
 
-## Known Limitations
+## Tech Stack
 
-- Backend sentiment analysis endpoints are not yet integrated with the frontend
-- ML model training is still in experimental phase
-- Database integration is pending
-- No user authentication system currently implemented
+| Layer | Technology |
+|-------|------------|
+| Model | Qwen2.5-0.5B with LoRA (PEFT) |
+| Backend | FastAPI, PyTorch, scikit-learn, Transformers |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Framer Motion |
+| Deployment | Docker on HF Spaces, Vercel |
 
-## Future Roadmap
-
-- Complete backend-frontend integration
-- Deploy trained ML model to production
-- Add user accounts and history tracking
-- Implement result persistence with database
-- Add support for multiple languages
-- Real-time sentiment analysis streaming
-- Export analysis results
-
-## Contributing
-
-This is a solo project under active development. Contributions and suggestions are welcome.
-
-## Project Notes
-
-This project was built with a focus on clean architecture and modern web development practices. The ML pipeline was trained on real-world sentiment data sourced from Reddit discussions on anxiety, depression, loneliness, mental health, and social issues.
+---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-For questions or suggestions about this project, feel free to open an issue or discussion.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
